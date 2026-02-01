@@ -152,6 +152,31 @@
 
   (assert-equal '(fact 5) 120)
 
+  ;; Step 9: Progn (複文の実行)
+
+  ;; 1. 特殊形式 progn のテスト
+  ;; 10, 20 と順番に評価されるが、結果として返るのは最後の 30
+  (assert-equal '(progn 10 20 30) 30)
+
+  ;; 2. 副作用の確認
+  ;; define で変数を書き換えた後、その変数を使うことができるか？
+  (assert-equal
+   '(progn
+     (define g-val 999)
+     g-val)
+   999)
+
+  ;; 3. Lambda/Defun の暗黙の progn (Implicit Progn)
+  ;; 関数定義の中で複数行書けるようにする
+  (assert-equal
+   '(defun multi-line (x)
+      (define temp x) ;; 1行目
+      (+ temp 1)) ;; 2行目
+   'multi-line)
+
+  (assert-equal '(multi-line 10) 11)
+  (assert-equal 'temp 10) ;; 副作用が残っているか確認
+
   ;; ---------------------------------------------------------
   ;; 集計と終了コード
   ;; ---------------------------------------------------------

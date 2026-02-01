@@ -14,11 +14,13 @@
   (cond
    ((consp expr)
      (cond
+      ((eq (first expr) 'progn)
+        (eval-progn (rest expr) env))
       ((eq (first expr) 'defun)
         (let ((name (second expr))
               (params (third expr))
-              (body (fourth expr)))
-          (my-eval (list 'define name (list 'lambda params body)) env)))
+              (body (cdddr expr)))
+          (my-eval (list 'define name (append (list 'lambda params) body)) env)))
       ((eq (first expr) 'define)
         (let ((var (second expr))
               (val (my-eval (third expr) env)))
@@ -37,26 +39,38 @@
          ; params
          (second expr)
          ; body
-         (third expr)
+         (cddr expr)
          ; saved-env
          env))
       ; function call t=bool
       (t
         (let ((fn (my-eval (first expr) env))
-              (args (mapcar (lambda (e) (my-eval e env)) (cdr expr))))
+              (args (mapcar (lambda (e) (my-eval e env)) (rest expr))))
           (my-apply fn args)))))
    ((numberp expr) expr)
    ((stringp expr) expr)
    ((symbolp expr)
-     (if (cdr (assoc expr env))
-         (cdr (assoc expr env))
-         (cdr (assoc expr *global-env*))))
+     (if (rest (assoc expr env))
+         (rest (assoc expr env))
+         (rest (assoc expr *global-env*))))
    (t "not implemented")))
 
 (defun my-apply (fn args)
   (cond
    ;;closure
    ((and (consp fn) (eq (first fn) 'closure))
-     (my-eval (third fn) (pairlis (second fn) args (fourth fn))))
+     (let ((params (second fn))
+           (body (third fn))
+           (saved-env (fourth fn)))
+       (eval-progn body (pairlis params args saved-env))))
 
    (t (apply fn args))))
+
+(defun eval-progn (exprs env)
+  (cond
+   ((null exprs) nil)
+   ((null (rest exprs))
+     (my-eval (first exprs) env))
+   (t
+     (my-eval (first exprs) env)
+     (eval-progn (rest exprs) env))))
