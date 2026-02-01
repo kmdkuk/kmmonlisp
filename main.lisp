@@ -14,6 +14,11 @@
   (cond
    ((consp expr)
      (cond
+      ((eq (first expr) 'defun)
+        (let ((name (second expr))
+              (params (third expr))
+              (body (fourth expr)))
+          (my-eval (list 'define name (list 'lambda params body)) env)))
       ((eq (first expr) 'define)
         (let ((var (second expr))
               (val (my-eval (third expr) env)))

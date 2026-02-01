@@ -131,6 +131,27 @@
 
   (assert-equal '(fib 6) 8)
 
+  ;; Step 8: Syntactic Sugar (defun)
+
+  ;; 1. defun で関数定義
+  ;; (defun add3 (x) (+ x 3))
+  ;; これが内部で (define add3 (lambda (x) (+ x 3))) に変換されて実行される
+  (assert-equal '(defun add3 (x) (+ x 3)) 'add3)
+
+  ;; 2. 定義した関数の実行
+  (assert-equal '(add3 10) 13)
+
+  ;; 3. 再帰関数も defun で書けるか (階乗の再定義)
+  ;; 以前の fact を上書きします
+  (assert-equal
+   '(defun fact (n)
+      (if (= n 0)
+          1
+          (* n (fact (- n 1)))))
+   'fact)
+
+  (assert-equal '(fact 5) 120)
+
   ;; ---------------------------------------------------------
   ;; 集計と終了コード
   ;; ---------------------------------------------------------
