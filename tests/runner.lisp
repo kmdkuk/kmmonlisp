@@ -58,38 +58,56 @@
   ;; Step 4: 関数適用 (Primitive Functions)
   ;; 環境に「シンボル」と「実際のCommon Lispの関数」のペアを用意します
   ;; #' (シャープクォート) は「関数オブジェクトそのもの」を取り出す記法です
-  (let ((global-env (list
-                     (cons '+ #'+)
-                     (cons '- #'-)
-                     (cons 'list #'list)
-                     (cons 'cons #'cons)
-                     (cons 'car #'car)
-                     (cons 'cdr #'cdr))))
+  ;; 1. 基本的な計算
+  (assert-equal '(+ 1 2) 3 nil)
 
-    ;; 1. 基本的な計算
-    (assert-equal '(+ 1 2) 3 global-env)
+  ;; 2. 入れ子の計算 (引数が評価されてから足し算されるか)
+  ;; (+ 1 (+ 2 3)) -> (+ 1 5) -> 6
+  (assert-equal '(+ 1 (+ 2 3)) 6 nil)
 
-    ;; 2. 入れ子の計算 (引数が評価されてから足し算されるか)
-    ;; (+ 1 (+ 2 3)) -> (+ 1 5) -> 6
-    (assert-equal '(+ 1 (+ 2 3)) 6 global-env)
+  ;; 3. リスト操作関数
+  (assert-equal '(list 1 2) '(1 2) nil)
+  (assert-equal '(car (cons 1 2)) 1 nil)
 
-    ;; 3. リスト操作関数
-    (assert-equal '(list 1 2) '(1 2) global-env)
-    (assert-equal '(car (cons 1 2)) 1 global-env)
+  ;; 4. 変数との組み合わせ
+  ;; (let ((env (cons (cons 'x 10) global-env))) ... ) のように拡張してテスト
+  (let ((env (append '((x . 10) (y . 20)) nil)))
+    (assert-equal '(+ x y) 30 env))
 
-    ;; 4. 変数との組み合わせ
-    ;; (let ((env (cons (cons 'x 10) global-env))) ... ) のように拡張してテスト
-    (let ((env (append '((x . 10) (y . 20)) global-env)))
-      (assert-equal '(+ x y) 30 env))
+  ;; Step 5: Lambda (ユーザー定義関数)
 
-    ;; Step 5: Lambda (ユーザー定義関数)
+  ;; 1. 基本的なLambdaの即時実行
+  ;; ((lambda (x) (+ x 1)) 10) -> xに10が入って計算される -> 11
+  (assert-equal '((lambda (x) (+ x 1)) 10) 11 nil)
 
-    ;; 1. 基本的なLambdaの即時実行
-    ;; ((lambda (x) (+ x 1)) 10) -> xに10が入って計算される -> 11
-    (assert-equal '((lambda (x) (+ x 1)) 10) 11 global-env)
+  ;; 2. 引数が複数の場合
+  (assert-equal '((lambda (x y) (+ x y)) 10 20) 30 nil)
 
-    ;; 2. 引数が複数の場合
-    (assert-equal '((lambda (x y) (+ x y)) 10 20) 30 global-env))
+  ;; Step 6: Define (変数の定義)
+
+  ;; 重要: Defineは「地球全体の環境 (*global-env*)」を書き換える副作用を持ちます。
+  ;; テストのたびに環境が汚れるのを防ぐため、本来はリセット処理が必要ですが、
+  ;; 簡易的に「毎回違う変数名」を使ってテストします。
+
+  ;; 1. 単純な変数の定義
+  ;; (define my-var 100) -> 評価結果はシンボル my-var (または値) が返ればOK
+  (assert-equal '(define my-var 100) 'my-var)
+
+  ;; 2. 定義した変数が参照できるか？
+  ;; ここで my-var が 100 と評価されれば成功
+  (assert-equal 'my-var 100)
+
+  ;; 3. 関数の定義 (Syntactic Sugar ではなく、まずは define + lambda で)
+  ;; (define inc (lambda (x) (+ x 1)))
+  (assert-equal '(define inc (lambda (x) (+ x 1))) 'inc)
+
+  ;; 4. 定義した関数が使えるか？
+  (assert-equal '(inc 10) 11)
+
+  ;; 5. ローカル変数とグローバル変数の優先順位
+  ;; ローカルの x=999 が、グローバルの my-var=100 より優先されるか
+  (let ((local-env '((my-var . 999))))
+    (assert-equal 'my-var 999 local-env))
 
   ;; ---------------------------------------------------------
   ;; 集計と終了コード
