@@ -2,25 +2,25 @@
   (cond
    ((consp expr)
      (cond
-      ((eq (car expr) `quote)
-        (cadr expr))
-      ((eq (car expr) `if)
-        (if (not (eq (my-eval (cadr expr) env) nil))
-            (my-eval (caddr expr) env)
+      ((eq (first expr) 'quote)
+        (second expr))
+      ((eq (first expr) 'if)
+        (if (my-eval (second expr) env)
+            (my-eval (third expr) env)
             (my-eval (cadddr expr) env)))
-      ((eq (car expr) `lambda)
+      ((eq (first expr) 'lambda)
         (list
          ; tag
-         `closure
+         'closure
          ; params
-         (cadr expr)
+         (second expr)
          ; body
-         (caddr expr)
+         (third expr)
          ; saved-env
          env))
       ; function call t=bool
       (t
-        (let ((fn (my-eval (car expr) env))
+        (let ((fn (my-eval (first expr) env))
               (args (mapcar (lambda (e) (my-eval e env)) (cdr expr))))
           (my-apply fn args)))))
    ((numberp expr) expr)
@@ -32,7 +32,7 @@
 (defun my-apply (fn args)
   (cond
    ;;closure
-   ((and (consp fn) (eq (car fn) `closure))
-     (my-eval (caddr fn) (pairlis (cadr fn) args (cadddr fn))))
+   ((and (consp fn) (eq (first fn) 'closure))
+     (my-eval (third fn) (pairlis (second fn) args (cadddr fn))))
 
    (t (apply fn args))))
