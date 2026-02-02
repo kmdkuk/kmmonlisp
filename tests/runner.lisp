@@ -200,6 +200,89 @@
   (assert-equal '(macroexpand '(unless t 1 2)) '(if t 2 1))
 
   ;; ---------------------------------------------------------
+  ;; Step 11: Recursive Macros (cond)
+  ;; ---------------------------------------------------------
+
+  ;; 再帰的なマクロを書くためには、リストの終端判定などが必要になります。
+  ;; main.lisp の *global-env* に eq, null, not が登録されている前提です。
+
+  ;; 1. cond マクロの定義
+  ;; (cond (p1 e1) (p2 e2) ...) 
+  ;; -> (if p1 e1 (cond (p2 e2) ...)) という形に展開します
+  (assert-equal
+   '(defmacro cond (&rest clauses)
+      (if (null clauses)
+          nil
+          (list 'if
+                (car (car clauses)) ;; 条件式: (car first-clause)
+                (car (cdr (car clauses))) ;; 処理:   (cadr first-clause)
+                (cons 'cond (cdr clauses))))) ;; 再帰:   (cond rest-clauses)
+   'cond)
+
+  ;; 2. cond の動作テスト
+  (assert-equal
+   '(cond ((= 1 2) 'one)
+          ((= 1 1) 'two)
+          (t 'three))
+   'two)
+
+  ;; 3. 再帰の終端 (該当なしで nil が返るか)
+  (assert-equal
+   '(cond ((= 1 2) 'one))
+   nil)
+
+  ;; ---------------------------------------------------------
+  ;; Step 12: Let Macro
+  ;; ---------------------------------------------------------
+
+  ;; 1. ヘルパー関数の定義
+  ;; letマクロが展開されるときに、リスト操作のために map や cadr が必要になります。
+
+  ;; cadr: リストの2番目の要素を取る (car (cdr x))
+  (assert-equal '(define cadr (lambda (x) (car (cdr x)))) 'cadr)
+
+  ;; map: リストの各要素に関数を適用する
+  (assert-equal
+   '(define map (lambda (f lst)
+                  (if (null lst)
+                      nil
+                      (cons (f (car lst)) (map f (cdr lst))))))
+   'map)
+
+  ;; 2. let マクロの定義
+  ;; バインディングリスト ((v1 i1) (v2 i2)) を
+  ;; 変数リスト (v1 v2) と 初期値リスト (i1 i2) に分解し、
+  ;; ((lambda (v1 v2) body...) i1 i2) というリストを構築します。
+  (assert-equal
+   '(defmacro let (bindings &rest body)
+      (cons (cons 'lambda
+                  (cons (map car bindings)
+                        body))
+            (map cadr bindings)))
+   'let)
+
+  ;; 3. let の動作テスト
+  (assert-equal
+   '(let ((x 10) (y 20))
+      (+ x y))
+   30)
+
+  ;; 4. スコープとシャドウイングのテスト
+  ;; 内側の let で x を再定義したら、内側では新しい値になるか
+  (assert-equal
+   '(let ((x 10))
+      (let ((x 999))
+        x))
+   999)
+
+  ;; 5. letのネストと計算
+  (assert-equal
+   '(let ((x 10))
+      (let ((y (+ x 5)))
+        (+ x y)))
+   25)
+
+  ;; ---------------------------------------------------------
   ;; 集計と終了コード
   ;; ---------------------------------------------------------
   (if (= *failed-count* 0)

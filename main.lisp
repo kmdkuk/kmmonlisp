@@ -1,6 +1,8 @@
 (declaim (ftype (function (t t) t) my-eval))
 
 (defparameter *global-env* (list
+                            (cons 't 't)
+                            (cons 'nil nil)
                             (cons '+ #'+)
                             (cons '- #'-)
                             (cons '* #'*)
@@ -9,6 +11,9 @@
                             (cons '> #'>)
                             (cons 'list #'list)
                             (cons 'cons #'cons)
+                            (cons 'eq #'eq)
+                            (cons 'null #'null)
+                            (cons 'not #'not)
                             (cons 'car #'car)
                             (cons 'cdr #'cdr)))
 
@@ -17,6 +22,16 @@
     (if local-search
         (cdr local-search)
         (cdr (assoc symbol *global-env*)))))
+
+(defun bind-params (params args env)
+  (cond
+   ((null params) env)
+   ((eq (first params) '&rest)
+     (cons (cons (second params) args) env))
+   (t
+     (cons (cons (first params) (first args))
+           (bind-params (rest params) (rest args) env)))))
+
 
 (defun eval-progn (exprs env)
   (cond
@@ -35,7 +50,7 @@
   (let ((params (second macro-def))
         (body (third macro-def))
         (saved-env (fourth macro-def)))
-    (eval-progn body (pairlis params args saved-env))))
+    (eval-progn body (bind-params params args saved-env))))
 
 (defun my-apply (fn args)
   (cond
@@ -44,7 +59,7 @@
      (let ((params (second fn))
            (body (third fn))
            (saved-env (fourth fn)))
-       (eval-progn body (pairlis params args saved-env))))
+       (eval-progn body (bind-params params args saved-env))))
    (t (apply fn args))))
 
 (defun my-eval (expr env)
