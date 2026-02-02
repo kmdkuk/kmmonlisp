@@ -1,0 +1,51 @@
+;;; stdlib.kmlisp - Standard Library for KommonLisp
+
+;; ---------------------------------------------------------
+;; 1. Helper Functions
+;; ---------------------------------------------------------
+
+(define cadr (lambda (x) (car (cdr x))))
+
+(define map (lambda (f lst)
+              (if (null lst)
+                  nil
+                  (cons (f (car lst)) (map f (cdr lst))))))
+
+;; ---------------------------------------------------------
+;; 2. Control Flow Macros
+;; ---------------------------------------------------------
+
+(defmacro cond (&rest clauses)
+  (if (null clauses)
+      nil
+      (list 'if
+            (car (car clauses))
+            (car (cdr (car clauses)))
+            (cons 'cond (cdr clauses)))))
+
+(defmacro let (bindings &rest body)
+  (cons (cons 'lambda
+              (cons (map car bindings)
+                    body))
+        (map cadr bindings)))
+
+;; ---------------------------------------------------------
+;; 3. Logical Macros
+;; ---------------------------------------------------------
+
+(defmacro and (&rest args)
+  (if (null args)
+      t
+      (if (null (cdr args))
+          (car args)
+          (list 'if (car args)
+                (cons 'and (cdr args))
+                nil))))
+
+(defmacro or (&rest args)
+  (if (null args)
+      nil
+      (if (null (cdr args))
+          (car args)
+          (list 'let (list (list '__temp (car args)))
+                (list 'if '__temp '__temp (cons 'or (cdr args)))))))

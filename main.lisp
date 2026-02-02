@@ -138,3 +138,26 @@
           (let ((fn (my-eval (first expr) env))
                 (args (eval-list (rest expr) env)))
             (my-apply fn args))))))))
+
+;; ---------------------------------------------------------
+;; File Loader
+;; ---------------------------------------------------------
+
+;; 指定されたファイルを読み込み、中の式を順に my-eval で実行する関数
+(defun interpret-file (path)
+  (format t "Loading ~A...~%" path)
+  (with-open-file (in path :direction :input :if-does-not-exist :error)
+    (loop for expr = (read in nil :eof) ;; ファイルからS式を1つずつ読む
+          until (eq expr :eof) ;; ファイルの終わり(:eof)まで繰り返す
+          do (my-eval expr nil))) ;; 読み込んだ式を評価する
+  (format t "Finished loading ~A.~%" path))
+
+;; ---------------------------------------------------------
+;; Bootstrapping
+;; ---------------------------------------------------------
+
+;; main.lisp がある場所と同じディレクトリにある stdlib.lisp を探す
+(let ((stdlib-path (merge-pathnames "stdlib.kmlisp" *load-truename*)))
+  (if (probe-file stdlib-path)
+      (interpret-file stdlib-path)
+      (format t "Warning: stdlib.kmlisp not found at ~A~%" stdlib-path)))
